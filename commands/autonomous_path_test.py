@@ -26,6 +26,7 @@ from commands2 import (
 from wpilib import Timer
 from wpimath import controller, geometry
 from wpimath.kinematics import ChassisSpeeds
+from pathplannerlib import PathPlanner
 
 from constants.swerve_constants import AutoConstants
 

@@ -26,7 +26,7 @@ from commands2 import (
 from wpilib import Timer
 from wpimath import controller, geometry
 from wpimath.kinematics import ChassisSpeeds
-from pathplannerlib import PathPlanner
+import pathplannerlib
 
 from constants.swerve_constants import AutoConstants
 
@@ -36,7 +36,7 @@ class DriveTrajectory(CommandBase):
         super().__init__()
         self.drive_sub = drive_sub
         self.path = path
-        self.target = PathPlanner.loadPath(self.path, max_vel, max_accel, reversed)
+        self.target = pathplannerlib.PathPlanner.loadPath(self.path, max_vel, max_accel, reversed)
 
         self.addRequirements(self.drive_sub)
         # self.robot.drivetrain.set_gyro(rotation.degrees())
@@ -102,7 +102,7 @@ class betterHolonomicDriveController:
 
     def optimize(self, currentPose, targetState):
         """
-        .enableContinuousInput() doesn't work so we have this
+        .enableContinuousInput() doesn't work, so we have this
         @parameter (Pose2d) currentPose		Robot's current pose
         @parameter (State) targetState		Robot's target state
         @returns (double) targetHeading		optimized heading

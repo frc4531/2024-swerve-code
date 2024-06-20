@@ -18,12 +18,25 @@ class DriveCommand(commands2.CommandBase):
         self.addRequirements(self.drive_sub)
 
     def execute(self) -> None:
+        forward = self.driver_controller.getY()
+        strafe = self.driver_controller.getX()
+
+        gyro_degrees = self.drive_sub.get_heading()
+        gyro_radians = gyro_degrees * math.pi/180
+        temp = forward * math.cos(gyro_radians) + strafe * math.sin(gyro_radians)
+        strafe = -forward * math.sin(gyro_radians) + strafe * math.cos(gyro_radians)
+        fwd = temp
+
         self.drive_sub.drive(
-            -wpimath.applyDeadband(
-                self.driver_controller.getY(), OIConstants.kDriveDeadband
+            wpimath.applyDeadband(
+                (-self.driver_controller.getY() * math.cos(self.drive_sub.get_heading() * (math.pi / 180))) +
+                (self.driver_controller.getX() * math.sin(self.drive_sub.get_heading() * (math.pi / 180))),
+                OIConstants.kDriveDeadband
             ),
             -wpimath.applyDeadband(
-                self.driver_controller.getX(), OIConstants.kDriveDeadband
+                (self.driver_controller.getY() * math.sin(self.drive_sub.get_heading() * (math.pi / 180))) +
+                (self.driver_controller.getX() * math.cos(self.drive_sub.get_heading() * (math.pi / 180))),
+                OIConstants.kDriveDeadband
             ),
             -wpimath.applyDeadband(
                 self.driver_controller.getZ(), OIConstants.kDriveDeadband

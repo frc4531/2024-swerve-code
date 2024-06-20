@@ -1,6 +1,7 @@
 import math
 
 import commands2
+import wpilib
 import wpimath
 
 from constants.swerve_constants import OIConstants
@@ -12,11 +13,12 @@ class DriveCommand(commands2.CommandBase):
     def __init__(self, drive_sub: DriveSubsystem) -> None:
         super().__init__()
 
+        self.driver_controller = wpilib.Joystick(0)
         self.drive_sub = drive_sub
         self.addRequirements(self.drive_sub)
 
     def execute(self) -> None:
-        self.drive_subsystem.drive(
+        self.drive_sub.drive(
             -wpimath.applyDeadband(
                 self.driver_controller.getY(), OIConstants.kDriveDeadband
             ),
@@ -26,8 +28,8 @@ class DriveCommand(commands2.CommandBase):
             -wpimath.applyDeadband(
                 self.driver_controller.getZ(), OIConstants.kDriveDeadband
             ),
-            True,
-            True,
+            False,
+            False,
         )
 
         # ----- DRIVE CODE FROM 2024-robot-code -----
@@ -54,7 +56,7 @@ class DriveCommand(commands2.CommandBase):
         return False
 
     def end(self, interrupted: bool) -> None:
-        self.drive_subsystem.drive(
+        self.drive_sub.drive(
             0,
             0,
             0,

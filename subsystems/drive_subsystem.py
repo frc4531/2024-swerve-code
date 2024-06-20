@@ -16,7 +16,7 @@ from wpimath.kinematics import (
 )
 
 from constants.swerve_constants import DriveConstants
-from max_swerve_module import MAXSwerveModule
+from subsystems.max_swerve_module import MAXSwerveModule
 from utils import swerve_utils
 from utils.pidd2_controller import PIDD2Controller
 

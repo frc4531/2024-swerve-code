@@ -5,6 +5,8 @@ import navx
 import wpilib
 
 from commands2 import Subsystem
+from pathplannerlib.auto import AutoBuilder
+from pathplannerlib.config import HolonomicPathFollowerConfig, PIDConstants, ReplanningConfig
 from wpilib import SPI, SmartDashboard
 from wpimath import kinematics
 from wpimath.filter import SlewRateLimiter
@@ -75,9 +77,23 @@ class DriveSubsystem(Subsystem):
             ),
         )
 
-        # Drive with PID Variables
-        self.angle_pid = PIDD2Controller(0.16, 0, 0.003, 0)
-        self.angle_pid.enableContinuousInput(0, 360)
+        AutoBuilder.configureHolonomic(
+            self.get_pose,  # Robot pose supplier
+            self.reset_odometry,
+            # Method to reset odometry (will be called if your auto has a starting pose)
+            self.get_chassis_speeds,  # ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+            self.drive_chassis_speeds,
+            # Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
+            HolonomicPathFollowerConfig(  # HolonomicPathFollowerConfig, this should likely live in your Constants class
+                PIDConstants(1.0, 0.0, 0.0),  # Translation PID constants
+                PIDConstants(1.0, 0.0, 0.0),  # Rotation PID constants
+                4.5,  # Max module speed, in m/s
+                0.4,  # Drive base radius in meters. Distance from robot center to furthest module.
+                ReplanningConfig()  # Default path replanning config. See the API for the options here
+            ),
+            lambda: False,
+            self  # Reference to this subsystem to set requirements
+        )
 
     def periodic(self) -> None:
         # Update the odometry in the periodic block
@@ -246,49 +262,6 @@ class DriveSubsystem(Subsystem):
         self.front_right.set_desired_state(fr)
         self.rear_left.set_desired_state(rl)
         self.rear_right.set_desired_state(rr)
-
-    def drive_with_translation(self, translation: Translation2d, rotation, field_relative, is_open_loop):
-        SmartDashboard.putNumber("Swerve/Translation X", translation.x)
-        SmartDashboard.putNumber("Swerve/Translation Y", translation.y)
-        SmartDashboard.putNumber("Swerve/Rotation", rotation)
-        SmartDashboard.putBoolean("Swerve/With PID", False)
-        if field_relative:
-            module_states = DriveConstants.kDriveKinematics.toSwerveModuleStates(
-                ChassisSpeeds.fromFieldRelativeSpeeds(
-                    translation.x,
-                    translation.y,
-                    rotation,
-                    Rotation2d.fromDegrees(self.get_heading()),
-                )
-            )
-        else:
-            module_states = DriveConstants.kDriveKinematics.toSwerveModuleStates(
-                ChassisSpeeds(
-                    translation.x,
-                    translation.y,
-                    rotation,
-                )
-            )
-        fl, fr, rl, rr = SwerveDrive4Kinematics.desaturateWheelSpeeds(
-            module_states, DriveConstants.kMaxSpeedMetersPerSecond
-        )
-
-        self.front_left.set_desired_state(fl)
-        self.front_right.set_desired_state(fr)
-        self.rear_left.set_desired_state(rl)
-        self.rear_right.set_desired_state(rr)
-
-    def drive_with_pid(self, translation: Translation2d, target_angle):
-        in_motion = not (math.isclose(translation.x, 0, abs_tol=0.2) and math.isclose(translation.y, 0, abs_tol=0.2))
-        if in_motion:
-            self.angle_pid.setPID(0.06, 0, 0, 0)
-        else:
-            self.angle_pid.setPID(0.15, 0, 0.004, 0)
-        pid_output = self.angle_pid.calculate(self.get_heading().degrees() % 360, target_angle)  # type: ignore
-        if not in_motion:
-            pid_output += math.copysign(0.7, pid_output)
-        SmartDashboard.putBoolean("Swerve/With PID", True)
-        self.drive_with_translation(translation, pid_output, True, True)
 
     def set_x(self) -> None:
         """Sets the wheels into an X formation to prevent movement."""

@@ -4,7 +4,7 @@ import commands2
 import wpilib
 
 from commands2 import cmd
-from pathplannerlib.auto import AutoBuilder
+from pathplannerlib.auto import AutoBuilder, PathPlannerAuto
 from pathplannerlib.config import HolonomicPathFollowerConfig, PIDConstants, ReplanningConfig
 from pathplannerlib.path import PathPlannerPath
 from wpimath.controller import PIDController, ProfiledPIDControllerRadians, HolonomicDriveController
@@ -41,6 +41,8 @@ class RobotContainer:
         self.drive_subsystem.setDefaultCommand(
             DriveCommand(self.drive_subsystem)
         )
+
+        self.test_path_auto = PathPlannerAuto('test_auto')
 
     def configure_button_bindings(self) -> None:
         """
@@ -103,25 +105,12 @@ class RobotContainer:
         # self.drive_subsystem.reset_odometry(example_trajectory.initialPose())
 
         # Run path following command, then stop at the end.
-        path = PathPlannerPath.fromPathFile('test_path')
-
-        AutoBuilder.configureHolonomic(
-            self.drive_subsystem.get_pose,  # Robot pose supplier
-            self.drive_subsystem.reset_odometry,  # Method to reset odometry (will be called if your auto has a starting pose)
-            self.drive_subsystem.get_chassis_speeds,  # ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-            self.drive_subsystem.drive_chassis_speeds,  # Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
-            HolonomicPathFollowerConfig(  # HolonomicPathFollowerConfig, this should likely live in your Constants class
-                PIDConstants(1.0, 0.0, 0.0),  # Translation PID constants
-                PIDConstants(1.0, 0.0, 0.0),  # Rotation PID constants
-                4.5,  # Max module speed, in m/s
-                0.4,  # Drive base radius in meters. Distance from robot center to furthest module.
-                ReplanningConfig()  # Default path replanning config. See the API for the options here
-            ),
-            lambda: False,
-            self.drive_subsystem  # Reference to this subsystem to set requirements
+        return self.test_path_auto.andThen(
+            cmd.run(
+                lambda: self.drive_subsystem.drive(0, 0, 0, False, False),
+                self.drive_subsystem
+            )
         )
-
-        return AutoBuilder.followPath(path)
 
         # return DriveTrajectory(self.drive_subsystem, "test_path", 3, 3, False).andThen(
         #     cmd.run(

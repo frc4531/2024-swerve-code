@@ -4,10 +4,14 @@ import commands2
 import wpilib
 
 from commands2 import cmd
+from pathplannerlib.auto import AutoBuilder
+from pathplannerlib.config import HolonomicPathFollowerConfig, PIDConstants, ReplanningConfig
+from pathplannerlib.path import PathPlannerPath
 from wpimath.controller import PIDController, ProfiledPIDControllerRadians, HolonomicDriveController
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.trajectory import TrajectoryConfig, TrajectoryGenerator
 
+from commands.autonomous_path_test import DriveTrajectory
 from commands.drive_command import DriveCommand
 from constants.swerve_constants import OIConstants, AutoConstants, DriveConstants
 from subsystems.drive_subsystem import DriveSubsystem
@@ -54,54 +58,74 @@ class RobotContainer:
 
         :returns: the command to run in autonomous
         """
-        # Create config for trajectory
-        config = TrajectoryConfig(
-            AutoConstants.kMaxSpeedMetersPerSecond,
-            AutoConstants.kMaxAccelerationMetersPerSecondSquared,
-        )
-        # Add kinematics to ensure max speed is actually obeyed
-        config.setKinematics(DriveConstants.kDriveKinematics)
-
-        # An example trajectory to follow. All units in meters.
-        example_trajectory = TrajectoryGenerator.generateTrajectory(
-            # Start at the origin facing the +X direction
-            Pose2d(0, 0, Rotation2d(0)),
-            # Pass through these two interior waypoints, making an 's' curve path
-            [Translation2d(1, 1), Translation2d(2, -1)],
-            # End 3 meters straight ahead of where we started, facing forward
-            Pose2d(3, 0, Rotation2d(0)),
-            config,
-        )
-
-        theta_controller = ProfiledPIDControllerRadians(
-            AutoConstants.kPThetaController,
-            0,
-            0,
-            AutoConstants.kThetaControllerConstraints,
-        )
-        theta_controller.enableContinuousInput(-math.pi, math.pi)
-
-        holonomic_controller = HolonomicDriveController(PIDController(AutoConstants.kPXController, 0, 0),
-                                                        PIDController(AutoConstants.kPYController, 0, 0),
-                                                        theta_controller)
-
-        swerve_controller_command = commands2.SwerveControllerCommand(
-            example_trajectory,
-            self.drive_subsystem.get_pose,  # Functional interface to feed supplier
-            DriveConstants.kDriveKinematics,
-            # Position controllers
-            holonomic_controller,
-            self.drive_subsystem.set_module_states,  # Same error appears in 2024-robot-code so IDK
-            (self.drive_subsystem,),
-        )
-
-        # Reset odometry to the starting pose of the trajectory.
-        self.drive_subsystem.reset_odometry(example_trajectory.initialPose())
+        # # Create config for trajectory
+        # config = TrajectoryConfig(
+        #     AutoConstants.kMaxSpeedMetersPerSecond,
+        #     AutoConstants.kMaxAccelerationMetersPerSecondSquared,
+        # )
+        # # Add kinematics to ensure max speed is actually obeyed
+        # config.setKinematics(DriveConstants.kDriveKinematics)
+        #
+        # # An example trajectory to follow. All units in meters.
+        # example_trajectory = TrajectoryGenerator.generateTrajectory(
+        #     # Start at the origin facing the +X direction
+        #     Pose2d(0, 0, Rotation2d(0)),
+        #     # Pass through these two interior waypoints, making an 's' curve path
+        #     [Translation2d(1, 1), Translation2d(2, -1)],
+        #     # End 3 meters straight ahead of where we started, facing forward
+        #     Pose2d(3, 0, Rotation2d(0)),
+        #     config,
+        # )
+        #
+        # theta_controller = ProfiledPIDControllerRadians(
+        #     AutoConstants.kPThetaController,
+        #     0,
+        #     0,
+        #     AutoConstants.kThetaControllerConstraints,
+        # )
+        # theta_controller.enableContinuousInput(-math.pi, math.pi)
+        #
+        # holonomic_controller = HolonomicDriveController(PIDController(AutoConstants.kPXController, 0, 0),
+        #                                                 PIDController(AutoConstants.kPYController, 0, 0),
+        #                                                 theta_controller)
+        #
+        # swerve_controller_command = commands2.SwerveControllerCommand(
+        #     example_trajectory,
+        #     self.drive_subsystem.get_pose,  # Functional interface to feed supplier
+        #     DriveConstants.kDriveKinematics,
+        #     # Position controllers
+        #     holonomic_controller,
+        #     self.drive_subsystem.set_module_states,  # Same error appears in 2024-robot-code so IDK
+        #     (self.drive_subsystem,),
+        # )
+        #
+        # # Reset odometry to the starting pose of the trajectory.
+        # self.drive_subsystem.reset_odometry(example_trajectory.initialPose())
 
         # Run path following command, then stop at the end.
-        return swerve_controller_command.andThen(
-            cmd.run(
-                lambda: self.drive_subsystem.drive(0, 0, 0, False, False),
-                self.drive_subsystem,
-            )
+        path = PathPlannerPath.fromPathFile('test_path')
+
+        AutoBuilder.configureHolonomic(
+            self.drive_subsystem.get_pose,  # Robot pose supplier
+            self.drive_subsystem.reset_odometry,  # Method to reset odometry (will be called if your auto has a starting pose)
+            self.drive_subsystem.get_chassis_speeds,  # ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+            self.drive_subsystem.drive_chassis_speeds,  # Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
+            HolonomicPathFollowerConfig(  # HolonomicPathFollowerConfig, this should likely live in your Constants class
+                PIDConstants(1.0, 0.0, 0.0),  # Translation PID constants
+                PIDConstants(1.0, 0.0, 0.0),  # Rotation PID constants
+                4.5,  # Max module speed, in m/s
+                0.4,  # Drive base radius in meters. Distance from robot center to furthest module.
+                ReplanningConfig()  # Default path replanning config. See the API for the options here
+            ),
+            lambda: False,
+            self.drive_subsystem  # Reference to this subsystem to set requirements
         )
+
+        return AutoBuilder.followPath(path)
+
+        # return DriveTrajectory(self.drive_subsystem, "test_path", 3, 3, False).andThen(
+        #     cmd.run(
+        #         lambda: self.drive_subsystem.drive(0, 0, 0, False, False),
+        #         self.drive_subsystem,
+        #     )
+        # )

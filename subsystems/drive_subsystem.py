@@ -6,6 +6,7 @@ import wpilib
 
 from commands2 import Subsystem
 from wpilib import SPI, SmartDashboard
+from wpimath import kinematics
 from wpimath.filter import SlewRateLimiter
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.kinematics import (
@@ -216,6 +217,31 @@ class DriveSubsystem(Subsystem):
         fl, fr, rl, rr = SwerveDrive4Kinematics.desaturateWheelSpeeds(
             swerve_module_states, DriveConstants.kMaxSpeedMetersPerSecond
         )
+        self.front_left.set_desired_state(fl)
+        self.front_right.set_desired_state(fr)
+        self.rear_left.set_desired_state(rl)
+        self.rear_right.set_desired_state(rr)
+
+    def get_chassis_speeds(self) -> ChassisSpeeds:
+        return DriveConstants.kDriveKinematics.toChassisSpeeds(
+            [self.front_left.get_state(),
+             self.front_right.get_state(),
+             self.rear_left.get_state(),
+             self.rear_right.get_state()]
+        )
+
+    def drive_chassis_speeds(self, chassis_speeds: ChassisSpeeds):
+        # SmartDashboard.putNumber("Swerve/Translation X", translation.x)
+        # SmartDashboard.putNumber("Swerve/Translation Y", translation.y)
+        # SmartDashboard.putNumber("Swerve/Rotation", rotation)
+        # SmartDashboard.putBoolean("Swerve/With PID", False)
+        module_states = DriveConstants.kDriveKinematics.toSwerveModuleStates(
+            chassis_speeds
+        )
+        fl, fr, rl, rr = SwerveDrive4Kinematics.desaturateWheelSpeeds(
+            module_states, DriveConstants.kMaxSpeedMetersPerSecond
+        )
+
         self.front_left.set_desired_state(fl)
         self.front_right.set_desired_state(fr)
         self.rear_left.set_desired_state(rl)

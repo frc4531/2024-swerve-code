@@ -36,6 +36,7 @@ class DriveTrajectory(CommandBase):
         super().__init__()
         self.drive_sub = drive_sub
         self.path = path
+        path_loaded = pathplannerlib.PathPlannerPath.fromPathFile(path)
         self.target = pathplannerlib.PathPlanner.loadPath(self.path, max_vel, max_accel, reversed)
 
         self.addRequirements(self.drive_sub)

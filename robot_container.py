@@ -60,61 +60,61 @@ class RobotContainer:
 
         :returns: the command to run in autonomous
         """
-        # # Create config for trajectory
-        # config = TrajectoryConfig(
-        #     AutoConstants.kMaxSpeedMetersPerSecond,
-        #     AutoConstants.kMaxAccelerationMetersPerSecondSquared,
-        # )
-        # # Add kinematics to ensure max speed is actually obeyed
-        # config.setKinematics(DriveConstants.kDriveKinematics)
-        #
-        # # An example trajectory to follow. All units in meters.
-        # example_trajectory = TrajectoryGenerator.generateTrajectory(
-        #     # Start at the origin facing the +X direction
-        #     Pose2d(0, 0, Rotation2d(0)),
-        #     # Pass through these two interior waypoints, making an 's' curve path
-        #     [Translation2d(1, 1), Translation2d(2, -1)],
-        #     # End 3 meters straight ahead of where we started, facing forward
-        #     Pose2d(3, 0, Rotation2d(0)),
-        #     config,
-        # )
-        #
-        # theta_controller = ProfiledPIDControllerRadians(
-        #     AutoConstants.kPThetaController,
-        #     0,
-        #     0,
-        #     AutoConstants.kThetaControllerConstraints,
-        # )
-        # theta_controller.enableContinuousInput(-math.pi, math.pi)
-        #
-        # holonomic_controller = HolonomicDriveController(PIDController(AutoConstants.kPXController, 0, 0),
-        #                                                 PIDController(AutoConstants.kPYController, 0, 0),
-        #                                                 theta_controller)
-        #
-        # swerve_controller_command = commands2.SwerveControllerCommand(
-        #     example_trajectory,
-        #     self.drive_subsystem.get_pose,  # Functional interface to feed supplier
-        #     DriveConstants.kDriveKinematics,
-        #     # Position controllers
-        #     holonomic_controller,
-        #     self.drive_subsystem.set_module_states,  # Same error appears in 2024-robot-code so IDK
-        #     (self.drive_subsystem,),
-        # )
-        #
-        # # Reset odometry to the starting pose of the trajectory.
-        # self.drive_subsystem.reset_odometry(example_trajectory.initialPose())
+        # Create config for trajectory
+        config = TrajectoryConfig(
+            AutoConstants.kMaxSpeedMetersPerSecond,
+            AutoConstants.kMaxAccelerationMetersPerSecondSquared,
+        )
+        # Add kinematics to ensure max speed is actually obeyed
+        config.setKinematics(DriveConstants.kDriveKinematics)
 
-        # Run path following command, then stop at the end.
-        return self.test_path_auto.andThen(
-            cmd.run(
-                lambda: self.drive_subsystem.drive(0, 0, 0, False, False),
-                self.drive_subsystem
-            )
+        # An example trajectory to follow. All units in meters.
+        example_trajectory = TrajectoryGenerator.generateTrajectory(
+            # Start at the origin facing the +X direction
+            Pose2d(0, 0, Rotation2d(0)),
+            # Pass through these two interior waypoints, making an 's' curve path
+            [Translation2d(1, 1), Translation2d(2, -1)],
+            # End 3 meters straight ahead of where we started, facing forward
+            Pose2d(3, 0, Rotation2d(0)),
+            config,
         )
 
-        # return DriveTrajectory(self.drive_subsystem, "test_path", 3, 3, False).andThen(
+        theta_controller = ProfiledPIDControllerRadians(
+            AutoConstants.kPThetaController,
+            0,
+            0,
+            AutoConstants.kThetaControllerConstraints,
+        )
+        theta_controller.enableContinuousInput(-math.pi, math.pi)
+
+        holonomic_controller = HolonomicDriveController(PIDController(AutoConstants.kPXController, 0, 0),
+                                                        PIDController(AutoConstants.kPYController, 0, 0),
+                                                        theta_controller)
+
+        swerve_controller_command = commands2.SwerveControllerCommand(
+            example_trajectory,
+            self.drive_subsystem.get_pose,  # Functional interface to feed supplier
+            DriveConstants.kDriveKinematics,
+            # Position controllers
+            holonomic_controller,
+            self.drive_subsystem.set_module_states,  # Same error appears in 2024-robot-code so IDK
+            (self.drive_subsystem,),
+        )
+
+        # Reset odometry to the starting pose of the trajectory.
+        self.drive_subsystem.reset_odometry(example_trajectory.initialPose())
+
+        # Run path following command, then stop at the end.
+        # return self.test_path_auto.andThen(
         #     cmd.run(
         #         lambda: self.drive_subsystem.drive(0, 0, 0, False, False),
-        #         self.drive_subsystem,
+        #         self.drive_subsystem
         #     )
         # )
+
+        return DriveTrajectory(self.drive_subsystem, "test_path", 3, 3, False).andThen(
+            cmd.run(
+                lambda: self.drive_subsystem.drive(0, 0, 0, False, False),
+                self.drive_subsystem,
+            )
+        )

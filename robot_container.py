@@ -112,7 +112,7 @@ class RobotContainer:
         #     )
         # )
 
-        return DriveTrajectory(self.drive_subsystem, "test_path", 3, 3, False).andThen(
+        return swerve_controller_command.andThen(
             cmd.run(
                 lambda: self.drive_subsystem.drive(0, 0, 0, False, False),
                 self.drive_subsystem,
